@@ -1,0 +1,68 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useDebouncedCallback } from 'use-debounce';
+import { fetchNotes } from '../../services/noteService';
+import NoteList from '../NoteList/NoteList';
+import Modal from '../Modal/Modal';
+import NoteForm from '../NoteForm/NoteForm';
+import Pagination from '../Pagination/Pagination';
+import SearchBox from '../SearchBox/SearchBox';
+import Loader from '../Loader/Loader';
+import ErrorMessage from '../ErrorMessage/ErrorMessage';
+import EmptyState from '../EmptyState/EmptyState';
+import css from './App.module.css';
+
+export default function App() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setDebouncedSearch(value);
+    setPage(1);
+  }, 700);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    debouncedSetSearch(value);
+  };
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['notes', page, debouncedSearch],
+    queryFn: () => fetchNotes({ page, perPage: 12, search: debouncedSearch }),
+    staleTime: 1000 * 30,
+  });
+
+  const notes = data?.notes ?? [];
+  const totalPages = data?.totalPages ?? 0;
+
+  return (
+    <div className={css.app}>
+      <header className={css.toolbar}>
+        <SearchBox value={search} onChange={handleSearchChange} />
+        {totalPages > 1 && (
+          <Pagination
+            pageCount={totalPages}
+            currentPage={page}
+            onPageChange={setPage}
+          />
+        )}
+        <button className={css.button} onClick={() => setIsModalOpen(true)}>
+          Create note +
+        </button>
+      </header>
+
+      {isLoading && <Loader />}
+      {isError && <ErrorMessage />}
+      {!isLoading && !isError && notes.length > 0 && <NoteList notes={notes} />}
+      {!isLoading && !isError && notes.length === 0 && <EmptyState />}
+
+      {isModalOpen && (
+        <Modal onClose={() => setIsModalOpen(false)}>
+          <NoteForm onClose={() => setIsModalOpen(false)} />
+        </Modal>
+      )}
+    </div>
+  );
+}
