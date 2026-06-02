@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useDebouncedCallback } from 'use-debounce';
 import { fetchNotes } from '../../services/noteService';
 import NoteList from '../NoteList/NoteList';
@@ -31,6 +31,7 @@ export default function App() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['notes', page, debouncedSearch],
     queryFn: () => fetchNotes({ page, perPage: 12, search: debouncedSearch }),
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 30,
   });
 
